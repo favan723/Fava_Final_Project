@@ -1,0 +1,131 @@
+---
+title: "U.S. Suicide Rate Analysis (1950–2021)"
+format: html
+editor: visual
+---
+
+## Introduction
+
+This report analyzes suicide rates in the United States using data from 1950 to 2021. We address:
+
+1.  Whether age-adjusted suicide rates have changed significantly over time (1980–2021).
+2.  Whether there is a significant difference in suicide rates between males and females in recent years (2015–2021).
+
+------------------------------------------------------------------------
+
+# Load required libraries
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(stringr)
+```
+
+# Read dataset
+
+```{r}
+death_rates <- read_csv("D:/Download Folder/Downloads/Death_Rates.csv")
+```
+
+# Rename columns for clarity
+
+```{r}
+death_rates <- death_rates %>%
+  mutate(
+    Year = as.numeric(as.character(YEAR)),
+    # Extract only 'Male' or 'Female' if they are at the beginning of STUB_LABEL
+    Sex = str_extract(STUB_LABEL, "^(Male|Female)"),
+    Rate = as.numeric(as.character(ESTIMATE))
+  ) %>%
+  # Keep only rows with valid Sex and Rate
+  filter(Sex %in% c("Male", "Female"), !is.na(Rate))
+```
+
+# Question 1
+
+# Has the age-adjusted suicide rate in the United States changed significantly over time from 1980 to 2021?
+
+# Filter data to exclude years before 1980
+
+```{r}
+q1_data <- death_rates %>%
+  filter(Year >= 1980) %>%
+  group_by(Year) %>%
+  summarise(Average_Rate = mean(Rate, na.rm = TRUE))
+```
+
+# Run linear regression to test for significant trend
+
+```{r}
+model_q1 <- lm(Average_Rate ~ Year, data = q1_data)
+summary(model_q1)  # Check p-value here
+```
+
+# Plot line of suicide rate over time
+
+```{r}
+ggplot(q1_data, aes(x = Year, y = Average_Rate)) +
+  geom_line(color = "blue", size = 1) +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  labs(title = "Average Suicide Rate in the U.S. (1980–2021)",
+       y = "Age-Adjusted Suicide Rate", x = "Year") +
+  theme_minimal()
+```
+
+# Answer 1
+
+# The determined p-value of the linear regression test is 8.338e-05, suggesting that there has been a signifcant change in suicide rates in the US from 1980 to 2021. As the graph displays, the rate significantly dipped from the late 90s to early 2000s, and has been on a large rise since 2005.
+
+# Question 2
+
+# Is there a significant difference in suicide rates between males and females (2015–2021)?
+
+# Filter data to exclude years before 2015
+
+```{r}
+recent_data <- death_rates %>%
+  filter(Year >= 2015)
+```
+
+# Summarize statistics by Sex
+
+```{r}
+summary_stats <- recent_data %>%
+  group_by(Sex) %>%
+  summarise(
+    Mean = mean(Rate),
+    SD = sd(Rate),
+    Min = min(Rate),
+    Max = max(Rate)
+  )
+print(summary_stats)
+```
+
+# Run two-sample t-test between Male and Female
+
+```{r}
+t_test_result <- t.test(Rate ~ Sex, data = recent_data)
+print(t_test_result)
+```
+
+# Plot boxplot of suicide rate by Sex
+
+```{r}
+ggplot(recent_data, aes(x = Sex, y = Rate, fill = Sex)) +
+  geom_boxplot() +
+  labs(title = "Suicide Rate by Sex (2015–2021)", y = "Rate") +
+  theme_minimal()
+```
+
+# Plot histogram of suicide rate by Sex
+
+```{r}
+ggplot(recent_data, aes(x = Rate, fill = Sex)) +
+  geom_histogram(bins = 30, alpha = 0.7, position = "identity") +
+  labs(title = "Histogram of Suicide Rates (2015–2021)", x = "Rate") +
+  theme_minimal()
+```
+
+# Answer 2
+
+## \# Analyzing the two-sample t-test, we see a p-value of 3.12e-81, meaning there is a significant difference between the suicide rates of males in females. Looking at both the boxplot and histogram confirms this as well, with males having a significantly higher suicide rate than females across the years 2015 to 2021.
